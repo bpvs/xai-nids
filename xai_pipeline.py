@@ -1,7 +1,7 @@
 """
 XAI for Network Intrusion Detection — Compact Pipeline
 =======================================================
-Train a 1D-CNN on NSL-KDD, then explain predictions with SHAP, LIME,
+Train a 1D-CNN on NSL-KDD dataset, then explain predictions with SHAP, LIME,
 and counterfactuals. Evaluate explanation quality.
 
 Usage:  python xai_pipeline.py
@@ -61,6 +61,11 @@ ATTACKS = {
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 1. DATA
+# Downloads the NSL-KDD dataset (two text files) if not already on disk
+# Encodes the three categorical columns (protocol type, service, and flag) 
+# into numbers using the LabelEncoder. Creates mapping from attack labels 
+# to binary (normal = 0, attack = 1), scales all 42 features to 0-1 range 
+# with MinMaxScaler, splits off 10% of training data for validation
 # ═══════════════════════════════════════════════════════════════════════════
 def load_data(data_dir="data"):
     """Download NSL-KDD if needed, return preprocessed X/y splits."""
@@ -104,6 +109,13 @@ def load_data(data_dir="data"):
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 2. MODEL
+# defines the neural network. It's 3 convolutional blocks stacked - each one
+# does ConvID --> Batch Norm --> ReLu --> Pooling. The features get reshaped
+# from a flat row into a 1D "sequence" so the convolutions can detect local 
+# patterns accross neighboring features (relationships, between src_bytes, 
+# dst_bytes, and land). After the conv blocks, GlobalAveragePooling collapses 
+# everything, then a Dense(64) + Dropout + Dense(1 sigmoid) gives a probability 
+# of "attack."
 # ═══════════════════════════════════════════════════════════════════════════
 def build_cnn(n_features):
     """1D-CNN: 3 conv blocks → dense classifier."""
@@ -120,7 +132,9 @@ def build_cnn(n_features):
     model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
     return model
 
-
+# Trains with early stopping (stops if validation loss doesn't improve for 5 epochs) 
+# and learning rate reduction. Then it evaluates on the test set and saves 
+# the confusion matrix.
 def train_and_evaluate(model, X_tr, y_tr, X_v, y_v, X_te, y_te):
     """Train model, plot history, print evaluation."""
     cbs = [
@@ -163,7 +177,11 @@ def predict_flat(model, X):
     """2D in → 1D probability out (wrapper for XAI tools)."""
     return model.predict(X.reshape(-1, X.shape[1], 1), verbose=0).flatten()
 
-
+# This takes 100 random training samples as a "background" baseline, then
+# for each of yout 5 selected samples, it perturbs features ~500 times and
+# measures how each perturbation changes the prediction. The result is a SHAP 
+# value per feature sample - positive means "pushes toward attack", negative 
+# means "pushes toward normal."
 def run_shap(model, X_bg, X_explain, feat_names):
     """KernelSHAP explanations."""
     print("\n── SHAP ──")
@@ -188,7 +206,10 @@ def run_shap(model, X_bg, X_explain, feat_names):
     print(f"  Saved SHAP plots for {len(X_explain)} samples")
     return sv
 
-
+# works sample-by-sample. For each sample, it generates 1000 perturbed neighbors,
+# gets the model's prediction on all of them, then fits a simple linear regression.
+# The coefficients of that linear model becomes the "explanation" - they tell you 
+# which  features the model relied on locally.
 def run_lime(model, X_train, X_explain, feat_names):
     """LIME explanations."""
     print("\n── LIME ──")
@@ -208,7 +229,11 @@ def run_lime(model, X_train, X_explain, feat_names):
     print(f"  Saved LIME plots for {len(X_explain)} samples")
     return lime_weights
 
-
+# is intuitive. For each sample, it asks: "what's the smallest change I can make
+# to flip the prediction?" It does this by nudging features in the direction of 
+# the gradient (computed via finite differences) while penalizing large changes 
+# (L1 regularization). If it flips the prediction within 500 iterations, it reports 
+# which feature changed and by how much.
 def run_counterfactuals(model, X_explain, feat_names, max_iter=500, lr=0.01):
     """Gradient-free counterfactual search."""
     print("\n── Counterfactuals ──")
@@ -257,6 +282,10 @@ def run_counterfactuals(model, X_explain, feat_names, max_iter=500, lr=0.01):
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 4. EVALUATION
+# compares SHAP and LIME by two measures: fidelity(if you zero the top-5 features
+# each method says are important, how much does the predicition actually change?)
+# and consistency (do both methods agree on which top-10 features matter, measured 
+# by Jaccard overlap?)
 # ═══════════════════════════════════════════════════════════════════════════
 def evaluate_explanations(model, X_explain, shap_vals, lime_weights, feat_names):
     """Fidelity + consistency metrics."""
