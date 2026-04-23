@@ -17,17 +17,6 @@ pip install -r requirements.txt
 python xai_pipeline.py
 ```
 
-Or use the notebook:
-
-```bash
-jupyter notebook walkthrough.ipynb
-```
-
 ## Dataset
 
 **NSL-KDD** — 41 network traffic features, ~125K train / ~22K test records. Auto-downloaded on first run.
-
-## References
-
-- SHAP: Lundberg & Lee (2017) — [arXiv:1705.07874](https://arxiv.org/abs/1705.07874)
-- LIME: Ribeiro et al. (2016) — [arXiv:1602.04938](https://arxiv.org/abs/1602.04938)
