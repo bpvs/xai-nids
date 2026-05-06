@@ -1,13 +1,15 @@
 """
 XAI for Network Intrusion Detection — Compact Pipeline
 =======================================================
-Train a 1D-CNN on NSL-KDD dataset, then explain predictions with SHAP, LIME,
-and counterfactuals. Evaluate explanation quality.
+Train a 1D-CNN on NSL-KDD, then explain predictions with SHAP, LIME,
+Saliency Maps, 1D Grad-CAM, and Counterfactuals. Evaluate explanation quality.
 
-Usage:  python xai_pipeline.py
+Usage:
+    python xai_pipeline.py              # full run
+    python xai_pipeline.py --fast       # fast mode (dev/debugging)
 """
 
-import os, json, warnings, requests
+import os, sys, json, warnings, requests
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -26,6 +28,29 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score, roc_auc_score
 import shap
 import lime.lime_tabular
+
+# ── GPU / Metal configuration ───────────────────────────────────────────────
+def configure_gpu():
+    """Detect and configure GPU (Apple Metal, CUDA, or CPU fallback)."""
+    gpus = tf.config.list_physical_devices("GPU")
+    if gpus:
+        for gpu in gpus:
+           tf.config.experimental.set_memory_growth(gpu, True)
+        print(f"  GPU detected: {gpus[0].name}")
+        # Set TF to use float32 globally (Metal works best with float32)
+        tf.keras.backend.set_floatx("float32")
+    else:
+        print("  No GPU detected — running on CPU")
+    # Enable XLA JIT compilation for faster TF ops
+    #tf.config.optimizer.set_jit(True)
+    return len(gpus) > 0
+
+HAS_GPU = configure_gpu()
+
+# ── Fast mode ───────────────────────────────────────────────────────────────
+FAST_MODE = "--fast" in sys.argv
+if FAST_MODE:
+    print("  ⚡ FAST MODE enabled (reduced iterations for dev/debugging)")
 
 RESULTS = "results"
 os.makedirs(RESULTS, exist_ok=True)
@@ -61,11 +86,6 @@ ATTACKS = {
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 1. DATA
-# Downloads the NSL-KDD dataset (two text files) if not already on disk
-# Encodes the three categorical columns (protocol type, service, and flag) 
-# into numbers using the LabelEncoder. Creates mapping from attack labels 
-# to binary (normal = 0, attack = 1), scales all 42 features to 0-1 range 
-# with MinMaxScaler, splits off 10% of training data for validation
 # ═══════════════════════════════════════════════════════════════════════════
 def load_data(data_dir="data"):
     """Download NSL-KDD if needed, return preprocessed X/y splits."""
@@ -109,13 +129,6 @@ def load_data(data_dir="data"):
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 2. MODEL
-# defines the neural network. It's 3 convolutional blocks stacked - each one
-# does ConvID --> Batch Norm --> ReLu --> Pooling. The features get reshaped
-# from a flat row into a 1D "sequence" so the convolutions can detect local 
-# patterns accross neighboring features (relationships, between src_bytes, 
-# dst_bytes, and land). After the conv blocks, GlobalAveragePooling collapses 
-# everything, then a Dense(64) + Dropout + Dense(1 sigmoid) gives a probability 
-# of "attack."
 # ═══════════════════════════════════════════════════════════════════════════
 def build_cnn(n_features):
     """1D-CNN: 3 conv blocks → dense classifier."""
@@ -132,11 +145,10 @@ def build_cnn(n_features):
     model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
     return model
 
-# Trains with early stopping (stops if validation loss doesn't improve for 5 epochs) 
-# and learning rate reduction. Then it evaluates on the test set and saves 
-# the confusion matrix.
+
 def train_and_evaluate(model, X_tr, y_tr, X_v, y_v, X_te, y_te):
     """Train model, plot history, print evaluation."""
+    n_epochs = 10 if FAST_MODE else 30
     cbs = [
         callbacks.EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True),
         callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-6),
@@ -144,7 +156,7 @@ def train_and_evaluate(model, X_tr, y_tr, X_v, y_v, X_te, y_te):
     hist = model.fit(
         X_tr.reshape(-1, X_tr.shape[1], 1), y_tr,
         validation_data=(X_v.reshape(-1, X_v.shape[1], 1), y_v),
-        epochs=30, batch_size=256, callbacks=cbs, verbose=1,
+        epochs=n_epochs, batch_size=256, callbacks=cbs, verbose=1,
     )
     # Training curves
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(10, 3.5))
@@ -174,20 +186,31 @@ def train_and_evaluate(model, X_tr, y_tr, X_v, y_v, X_te, y_te):
 # 3. EXPLAINERS
 # ═══════════════════════════════════════════════════════════════════════════
 def predict_flat(model, X):
-    """2D in → 1D probability out (wrapper for XAI tools)."""
-    return model.predict(X.reshape(-1, X.shape[1], 1), verbose=0).flatten()
+    """2D in → 1D probability out. Uses TF directly (GPU-accelerated)."""
+    X_3d = tf.constant(X.reshape(-1, X.shape[-1], 1), dtype=tf.float32)
+    return model(X_3d, training=False).numpy().flatten()
 
-# This takes 100 random training samples as a "background" baseline, then
-# for each of yout 5 selected samples, it perturbs features ~500 times and
-# measures how each perturbation changes the prediction. The result is a SHAP 
-# value per feature sample - positive means "pushes toward attack", negative 
-# means "pushes toward normal."
+
+@tf.function(reduce_retracing=True)
+def _predict_tf(model, X_3d):
+    """Compiled TF prediction — avoids Python overhead on repeated calls."""
+    return model(X_3d, training=False)
+
+
+def predict_flat_batch(model, X_batch):
+    """Batch prediction for multiple samples at once (much faster on GPU)."""
+    X_3d = tf.constant(X_batch.reshape(-1, X_batch.shape[-1], 1), dtype=tf.float32)
+    return _predict_tf(model, X_3d).numpy().flatten()
+
+
 def run_shap(model, X_bg, X_explain, feat_names):
     """KernelSHAP explanations."""
     print("\n── SHAP ──")
-    bg = X_bg[np.random.choice(len(X_bg), 100, replace=False)]
+    n_bg = 50 if FAST_MODE else 100
+    n_samples = 200 if FAST_MODE else 500
+    bg = X_bg[np.random.choice(len(X_bg), n_bg, replace=False)]
     explainer = shap.KernelExplainer(lambda x: predict_flat(model, x), bg)
-    sv = explainer.shap_values(X_explain, nsamples=500)
+    sv = explainer.shap_values(X_explain, nsamples=n_samples)
 
     # Summary plot
     plt.figure(figsize=(8, 6))
@@ -206,10 +229,7 @@ def run_shap(model, X_bg, X_explain, feat_names):
     print(f"  Saved SHAP plots for {len(X_explain)} samples")
     return sv
 
-# works sample-by-sample. For each sample, it generates 1000 perturbed neighbors,
-# gets the model's prediction on all of them, then fits a simple linear regression.
-# The coefficients of that linear model becomes the "explanation" - they tell you 
-# which  features the model relied on locally.
+
 def run_lime(model, X_train, X_explain, feat_names):
     """LIME explanations."""
     print("\n── LIME ──")
@@ -217,8 +237,9 @@ def run_lime(model, X_train, X_explain, feat_names):
     exp = lime.lime_tabular.LimeTabularExplainer(X_train, feature_names=feat_names, class_names=["Normal","Attack"], mode="classification", random_state=42)
 
     lime_weights = []
+    n_lime_samples = 500 if FAST_MODE else 1000
     for i in range(len(X_explain)):
-        explanation = exp.explain_instance(X_explain[i], predict_proba, num_features=15)
+        explanation = exp.explain_instance(X_explain[i], predict_proba, num_features=15, num_samples=n_lime_samples)
         fig = explanation.as_pyplot_figure(); fig.set_size_inches(7, 4)
         plt.title(f"LIME — Sample {i}"); plt.tight_layout()
         plt.savefig(f"{RESULTS}/lime_sample_{i}.png", dpi=150, bbox_inches="tight"); plt.close()
@@ -229,37 +250,46 @@ def run_lime(model, X_train, X_explain, feat_names):
     print(f"  Saved LIME plots for {len(X_explain)} samples")
     return lime_weights
 
-# is intuitive. For each sample, it asks: "what's the smallest change I can make
-# to flip the prediction?" It does this by nudging features in the direction of 
-# the gradient (computed via finite differences) while penalizing large changes 
-# (L1 regularization). If it flips the prediction within 500 iterations, it reports 
-# which feature changed and by how much.
+
 def run_counterfactuals(model, X_explain, feat_names, max_iter=500, lr=0.01):
-    """Gradient-free counterfactual search."""
+    """
+    Counterfactual search using TensorFlow GradientTape (GPU-accelerated).
+    Replaces slow finite-difference gradients with analytic TF gradients.
+    """
     print("\n── Counterfactuals ──")
+    iters = (100 if FAST_MODE else max_iter)
     results = []
+
     for i in range(len(X_explain)):
-        x = X_explain[i].copy().astype(np.float64)
-        x_orig = x.copy()
-        orig_pred = predict_flat(model, x.reshape(1, -1))[0]
+        x_orig = X_explain[i].copy().astype(np.float32)
+        x_cf = tf.Variable(x_orig.reshape(1, -1, 1), dtype=tf.float32)
+        orig_pred = model(tf.constant(x_orig.reshape(1, -1, 1)), training=False).numpy().flatten()[0]
         target = 0 if orig_pred > 0.5 else 1
         success = False
 
-        for it in range(max_iter):
-            pred = predict_flat(model, x.reshape(1, -1))[0]
-            if (target == 1 and pred > 0.5) or (target == 0 and pred < 0.5):
-                success = True; break
-            # Finite-difference gradient
-            grad = np.zeros_like(x)
-            for j in range(len(x)):
-                xp, xm = x.copy(), x.copy()
-                xp[j] += 1e-4; xm[j] -= 1e-4
-                grad[j] = (predict_flat(model, xp.reshape(1,-1))[0] - predict_flat(model, xm.reshape(1,-1))[0]) / 2e-4
-            x -= lr * ((-grad if target == 1 else grad) + 0.05 * np.sign(x - x_orig))
-            x = np.clip(x, 0, 1)
+        for it in range(iters):
+            with tf.GradientTape() as tape:
+                pred = model(x_cf, training=False)
+                # Loss: push prediction toward target
+                if target == 1:
+                    loss = -pred  # maximize
+                else:
+                    loss = pred   # minimize
+                # L1 sparsity penalty
+                l1 = 0.05 * tf.reduce_sum(tf.abs(x_cf - x_orig.reshape(1, -1, 1)))
+                loss = loss + l1
 
-        cf_pred = predict_flat(model, x.reshape(1, -1))[0]
-        delta = x - x_orig
+            grad = tape.gradient(loss, x_cf)
+            x_cf.assign_sub(lr * grad)
+            x_cf.assign(tf.clip_by_value(x_cf, 0.0, 1.0))
+
+            current_pred = model(x_cf, training=False).numpy().flatten()[0]
+            if (target == 1 and current_pred > 0.5) or (target == 0 and current_pred < 0.5):
+                success = True; break
+
+        cf_pred = model(x_cf, training=False).numpy().flatten()[0]
+        cf_np = x_cf.numpy().flatten()
+        delta = cf_np - x_orig.flatten()
         changes = {feat_names[j]: float(delta[j]) for j in range(len(delta)) if abs(delta[j]) > 1e-6}
 
         # Plot
@@ -280,49 +310,214 @@ def run_counterfactuals(model, X_explain, feat_names, max_iter=500, lr=0.01):
     return results
 
 
+def run_saliency(model, X_explain, feat_names):
+    """
+    Saliency maps (vanilla gradient).
+    Computes ∂output/∂input — how much each input feature affects the
+    prediction if nudged infinitesimally. Fast (one backward pass per sample).
+    """
+    print("\n── Saliency Maps ──")
+    all_grads = []
+
+    for i in range(len(X_explain)):
+        x_tensor = tf.constant(X_explain[i].reshape(1, -1, 1), dtype=tf.float32)
+        with tf.GradientTape() as tape:
+            tape.watch(x_tensor)
+            pred = model(x_tensor, training=False)
+        grads = tape.gradient(pred, x_tensor).numpy().flatten()  # shape: (n_features,)
+        all_grads.append(grads)
+
+        # Plot
+        abs_g = np.abs(grads)
+        idx = np.argsort(abs_g)[::-1][:12]
+        plt.figure(figsize=(7, 4))
+        plt.barh(range(len(idx)), abs_g[idx], color="#8e44ad")
+        plt.yticks(range(len(idx)), [feat_names[j] for j in idx])
+        plt.xlabel("|Gradient|"); plt.title(f"Saliency Map — Sample {i}"); plt.gca().invert_yaxis()
+        plt.tight_layout(); plt.savefig(f"{RESULTS}/saliency_sample_{i}.png", dpi=150); plt.close()
+
+    print(f"  Saved saliency plots for {len(X_explain)} samples")
+    return np.array(all_grads)
+
+
+def run_gradcam_1d(model, X_explain, feat_names):
+    """
+    1D Grad-CAM (Gradient-weighted Class Activation Mapping).
+    Targets the last Conv1D layer: computes the gradient of the output w.r.t.
+    that layer's activations, then weights each filter by its mean gradient
+    and sums to get a per-feature importance heatmap.
+
+    In 2D image models this produces a spatial heatmap over pixels.
+    Here it produces a 1D heatmap over the feature dimension — which features
+    the final conv layer "looked at" most for this prediction.
+    """
+    print("\n── 1D Grad-CAM ──")
+
+    # Find the last Conv1D layer
+    conv_layer = None
+    for layer in reversed(model.layers):
+        if isinstance(layer, layers.Conv1D):
+            conv_layer = layer
+            break
+    if conv_layer is None:
+        print("  [!] No Conv1D layer found — skipping Grad-CAM")
+        return None
+
+    print(f"  Target layer: {conv_layer.name} (filters={conv_layer.filters})")
+
+    # Build a sub-model: input → [conv_layer_output, final_output]
+    inp = keras.Input(shape=(len(feat_names), 1))
+    x = inp
+    conv_out = None
+    for layer in model.layers:
+        x = layer(x)
+        if layer == conv_layer:
+            conv_out = x
+    grad_model = keras.Model(inputs=inp, outputs=[conv_out, x])
+
+    all_heatmaps = []
+    for i in range(len(X_explain)):
+        x_tensor = tf.constant(X_explain[i].reshape(1, -1, 1), dtype=tf.float32)
+
+        with tf.GradientTape() as tape:
+            conv_out, pred = grad_model(x_tensor, training=False)
+            # For binary: use the single sigmoid output directly
+            target_score = pred[0, 0]
+
+        # Gradient of output w.r.t. conv layer activations
+        grads = tape.gradient(target_score, conv_out)  # (1, seq_len, filters)
+
+        # Global-average-pool the gradients over the spatial dim → weight per filter
+        weights = tf.reduce_mean(grads, axis=1)  # (1, filters)
+
+        # Weighted combination of conv feature maps
+        conv_out_np = conv_out.numpy()[0]   # (seq_len, filters)
+        weights_np = weights.numpy()[0]     # (filters,)
+
+        # Grad-CAM heatmap: weighted sum across filters, then ReLU
+        heatmap = np.dot(conv_out_np, weights_np)  # (seq_len,)
+        heatmap = np.maximum(heatmap, 0)            # ReLU — only positive contributions
+
+        # The conv+pooling layers may have changed the sequence length,
+        # so we interpolate back to the original feature count
+        if len(heatmap) != len(feat_names):
+            from scipy.interpolate import interp1d
+            x_old = np.linspace(0, 1, len(heatmap))
+            x_new = np.linspace(0, 1, len(feat_names))
+            heatmap = interp1d(x_old, heatmap, kind="linear")(x_new)
+
+        # Normalise to 0–1
+        if heatmap.max() > 0:
+            heatmap = heatmap / heatmap.max()
+
+        all_heatmaps.append(heatmap)
+
+        # Plot
+        idx = np.argsort(heatmap)[::-1][:12]
+        plt.figure(figsize=(7, 4))
+        plt.barh(range(len(idx)), heatmap[idx], color="#e67e22")
+        plt.yticks(range(len(idx)), [feat_names[j] for j in idx])
+        plt.xlabel("Grad-CAM activation"); plt.title(f"1D Grad-CAM — Sample {i}"); plt.gca().invert_yaxis()
+        plt.tight_layout(); plt.savefig(f"{RESULTS}/gradcam_sample_{i}.png", dpi=150); plt.close()
+
+    # Summary: average heatmap across all samples
+    avg_heatmap = np.mean(all_heatmaps, axis=0)
+    idx = np.argsort(avg_heatmap)[::-1][:15]
+    plt.figure(figsize=(8, 5))
+    plt.barh(range(len(idx)), avg_heatmap[idx], color="#e67e22", alpha=0.85)
+    plt.yticks(range(len(idx)), [feat_names[j] for j in idx])
+    plt.xlabel("Mean Grad-CAM activation"); plt.title("1D Grad-CAM — Average Feature Importance")
+    plt.gca().invert_yaxis(); plt.tight_layout()
+    plt.savefig(f"{RESULTS}/gradcam_summary.png", dpi=150); plt.close()
+
+    print(f"  Saved Grad-CAM plots for {len(X_explain)} samples")
+    return np.array(all_heatmaps)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # 4. EVALUATION
-# compares SHAP and LIME by two measures: fidelity(if you zero the top-5 features
-# each method says are important, how much does the predicition actually change?)
-# and consistency (do both methods agree on which top-10 features matter, measured 
-# by Jaccard overlap?)
 # ═══════════════════════════════════════════════════════════════════════════
-def evaluate_explanations(model, X_explain, shap_vals, lime_weights, feat_names):
-    """Fidelity + consistency metrics."""
+def evaluate_explanations(model, X_explain, shap_vals, lime_weights, feat_names,
+                          saliency_grads=None, gradcam_maps=None):
+    """Fidelity + consistency metrics across all methods."""
     print("\n── Evaluation ──")
-    shap_fid, lime_fid, consistency = [], [], []
 
+    # Build importance dicts for each method per sample
+    def _imp(method, i):
+        if method == "SHAP":
+            return dict(zip(feat_names, shap_vals[i]))
+        elif method == "LIME":
+            return lime_weights[i]
+        elif method == "Saliency" and saliency_grads is not None:
+            return dict(zip(feat_names, np.abs(saliency_grads[i])))
+        elif method == "Grad-CAM" and gradcam_maps is not None:
+            return dict(zip(feat_names, gradcam_maps[i]))
+        return None
+
+    methods = ["SHAP", "LIME"]
+    if saliency_grads is not None:
+        methods.append("Saliency")
+    if gradcam_maps is not None:
+        methods.append("Grad-CAM")
+
+    # Fidelity per method
+    fidelity = {m: [] for m in methods}
     for i in range(len(X_explain)):
         x = X_explain[i].reshape(1, -1)
         orig = predict_flat(model, x)[0]
-
-        # Fidelity: mask top-5 features, measure prediction change
-        for tag, imp in [("SHAP", dict(zip(feat_names, shap_vals[i]))), ("LIME", lime_weights[i])]:
+        for m in methods:
+            imp = _imp(m, i)
+            if imp is None:
+                continue
             top5 = sorted(imp, key=lambda f: abs(imp[f]), reverse=True)[:5]
             x_mask = x.copy()
             x_mask[0, [feat_names.index(f) for f in top5]] = 0
             fid = abs(orig - predict_flat(model, x_mask)[0])
-            (shap_fid if tag == "SHAP" else lime_fid).append(fid)
+            fidelity[m].append(fid)
 
-        # Consistency: Jaccard overlap of top-10 features
-        shap_top = set(sorted(feat_names, key=lambda f: abs(dict(zip(feat_names, shap_vals[i]))[f]), reverse=True)[:10])
-        lime_top = set(sorted(lime_weights[i], key=lambda f: abs(lime_weights[i][f]), reverse=True)[:10])
-        consistency.append(len(shap_top & lime_top) / len(shap_top | lime_top) if (shap_top | lime_top) else 0)
+    for m in methods:
+        print(f"  {m:10s} fidelity: {np.mean(fidelity[m]):.4f} ± {np.std(fidelity[m]):.4f}")
 
-    print(f"  SHAP fidelity:  {np.mean(shap_fid):.4f} ± {np.std(shap_fid):.4f}")
-    print(f"  LIME fidelity:  {np.mean(lime_fid):.4f} ± {np.std(lime_fid):.4f}")
-    print(f"  Consistency:    {np.mean(consistency):.4f} ± {np.std(consistency):.4f}")
+    # Pairwise consistency (Jaccard@10) for all method pairs
+    from itertools import combinations
+    pair_consistency = {}
+    for m1, m2 in combinations(methods, 2):
+        scores = []
+        for i in range(len(X_explain)):
+            imp1, imp2 = _imp(m1, i), _imp(m2, i)
+            if imp1 is None or imp2 is None:
+                continue
+            top1 = set(sorted(imp1, key=lambda f: abs(imp1[f]), reverse=True)[:10])
+            top2 = set(sorted(imp2, key=lambda f: abs(imp2[f]), reverse=True)[:10])
+            scores.append(len(top1 & top2) / len(top1 | top2) if (top1 | top2) else 0)
+        pair_consistency[f"{m1}–{m2}"] = scores
+        print(f"  {m1}–{m2} consistency: {np.mean(scores):.4f} ± {np.std(scores):.4f}")
 
-    # Plot
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(10, 4))
-    a1.bar(["SHAP","LIME"], [np.mean(shap_fid), np.mean(lime_fid)],
-           yerr=[np.std(shap_fid), np.std(lime_fid)], color=["#2ecc71","#e74c3c"], capsize=5)
-    a1.set_title("Mean Fidelity"); a1.set_ylabel("Prediction change"); a1.grid(alpha=0.3)
-    a2.bar(range(len(consistency)), consistency, color="#3498db")
-    a2.set_title("SHAP–LIME Consistency (Jaccard@10)"); a2.set_xlabel("Sample"); a2.set_ylim(0,1); a2.grid(alpha=0.3)
+    # Plot: fidelity comparison
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 4.5))
+    colors = {"SHAP": "#2ecc71", "LIME": "#e74c3c", "Saliency": "#8e44ad", "Grad-CAM": "#e67e22"}
+    means = [np.mean(fidelity[m]) for m in methods]
+    stds  = [np.std(fidelity[m]) for m in methods]
+    bars = a1.bar(methods, means, yerr=stds, color=[colors[m] for m in methods], capsize=5, alpha=0.85)
+    a1.set_title("Mean Fidelity by Method"); a1.set_ylabel("Prediction change (higher = better)"); a1.grid(alpha=0.3)
+
+    # Plot: pairwise consistency heatmap
+    n = len(methods)
+    matrix = np.eye(n)
+    for pair_name, scores in pair_consistency.items():
+        m1, m2 = pair_name.split("–")
+        i1, i2 = methods.index(m1.split("–")[0]), methods.index(m2.split("–")[0])
+        matrix[i1, i2] = matrix[i2, i1] = np.mean(scores)
+    sns.heatmap(matrix, annot=True, fmt=".2f", xticklabels=methods, yticklabels=methods,
+                cmap="YlGnBu", vmin=0, vmax=1, ax=a2)
+    a2.set_title("Pairwise Consistency (Jaccard@10)")
+
     plt.tight_layout(); plt.savefig(f"{RESULTS}/evaluation.png", dpi=150); plt.close()
 
-    return {"shap_fidelity": float(np.mean(shap_fid)), "lime_fidelity": float(np.mean(lime_fid)), "consistency": float(np.mean(consistency))}
+    return {
+        "fidelity": {m: float(np.mean(fidelity[m])) for m in methods},
+        "consistency": {k: float(np.mean(v)) for k, v in pair_consistency.items()},
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -334,16 +529,16 @@ if __name__ == "__main__":
     print("=" * 50)
 
     # Data
-    print("\n[1/6] Loading data...")
+    print("\n[1/8] Loading data...")
     X_tr, X_v, X_te, y_tr, y_v, y_te, feats = load_data()
 
     # Model
-    print("\n[2/6] Training 1D-CNN...")
+    print("\n[2/8] Training 1D-CNN...")
     model = build_cnn(X_tr.shape[1])
     y_pred, y_prob, metrics = train_and_evaluate(model, X_tr, y_tr, X_v, y_v, X_te, y_te)
 
     # Select samples to explain (mix of normal + attack)
-    print("\n[3/6] Selecting samples...")
+    print("\n[3/8] Selecting samples...")
     norm_idx = np.where((y_te == 0) & (y_pred == 0))[0]
     att_idx  = np.where((y_te == 1) & (y_pred == 1))[0]
     sel = np.concatenate([np.random.choice(norm_idx, 2, replace=False), np.random.choice(att_idx, 3, replace=False)])
@@ -351,16 +546,23 @@ if __name__ == "__main__":
     print(f"  {len(sel)} samples selected")
 
     # Explain
-    print("\n[4/6] SHAP explanations...")
+    print("\n[4/8] SHAP explanations...")
     sv = run_shap(model, X_tr, X_exp, feats)
 
-    print("\n[5/6] LIME + Counterfactual explanations...")
+    print("\n[5/8] LIME explanations...")
     lw = run_lime(model, X_tr, X_exp, feats)
+
+    print("\n[6/8] Saliency maps + Grad-CAM...")
+    sal = run_saliency(model, X_exp, feats)
+    gcam = run_gradcam_1d(model, X_exp, feats)
+
+    print("\n[7/8] Counterfactual explanations...")
     cf = run_counterfactuals(model, X_exp, feats)
 
     # Evaluate
-    print("\n[6/6] Evaluating explanations...")
-    ev = evaluate_explanations(model, X_exp, sv, lw, feats)
+    print("\n[8/8] Evaluating all explanations...")
+    ev = evaluate_explanations(model, X_exp, sv, lw, feats,
+                               saliency_grads=sal, gradcam_maps=gcam)
 
     # Save report
     report = {"model": metrics, "evaluation": ev,
