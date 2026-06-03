@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+venv/
+data/
+results_*/
+.ipynb_checkpoints/
+*.h5
+*.json
+.DS_Store
+cross_model_comparison.png
