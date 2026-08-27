@@ -1,0 +1,113 @@
+{
+  "zero_frac_threshold": 0.95,
+  "n_features_before": 41,
+  "n_features_after": 26,
+  "dropped_constant": {
+    "num_outbound_cmds": {
+      "reason": "zero_variance_constant",
+      "constant_value": 0.0,
+      "zero_fraction": 1.0
+    }
+  },
+  "dropped_high_zero": {
+    "land": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9997845364503727,
+      "n_unique": 2
+    },
+    "wrong_fragment": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9919874492482342,
+      "n_unique": 3
+    },
+    "urgent": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9998720685174087,
+      "n_unique": 4
+    },
+    "hot": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9752351582647104,
+      "n_unique": 29
+    },
+    "num_failed_logins": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9959600584444879,
+      "n_unique": 6
+    },
+    "num_compromised": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9888564945427123,
+      "n_unique": 96
+    },
+    "root_shell": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9984917551526088,
+      "n_unique": 2
+    },
+    "su_attempted": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9994344081822283,
+      "n_unique": 3
+    },
+    "num_root": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.99530693455968,
+      "n_unique": 91
+    },
+    "num_file_creations": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9977847653803942,
+      "n_unique": 36
+    },
+    "num_shells": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9995556064288936,
+      "n_unique": 4
+    },
+    "num_access_files": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9970171764848469,
+      "n_unique": 10
+    },
+    "is_host_login": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9999192011688898,
+      "n_unique": 2
+    },
+    "is_guest_login": {
+      "reason": "zero_fraction_ge_0.95",
+      "zero_fraction": 0.9876916447275396,
+      "n_unique": 2
+    }
+  },
+  "kept_features": [
+    "duration",
+    "protocol_type",
+    "service",
+    "flag",
+    "src_bytes",
+    "dst_bytes",
+    "logged_in",
+    "count",
+    "srv_count",
+    "serror_rate",
+    "srv_serror_rate",
+    "rerror_rate",
+    "srv_rerror_rate",
+    "same_srv_rate",
+    "diff_srv_rate",
+    "srv_diff_host_rate",
+    "dst_host_count",
+    "dst_host_srv_count",
+    "dst_host_same_srv_rate",
+    "dst_host_diff_srv_rate",
+    "dst_host_same_src_port_rate",
+    "dst_host_srv_diff_host_rate",
+    "dst_host_serror_rate",
+    "dst_host_srv_serror_rate",
+    "dst_host_rerror_rate",
+    "dst_host_srv_rerror_rate"
+  ],
+  "note": "Constants are always dropped. High-zero-fraction columns are dropped only when --drop-zero-frac is set; on NSL-KDD these are largely U2R/R2L rare-attack detectors."
+}

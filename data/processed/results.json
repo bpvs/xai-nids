@@ -1,0 +1,104 @@
+{
+  "fast_mode": false,
+  "n_features": 26,
+  "clean_source": "data/processed/clean.parquet",
+  "models": {
+    "cnn": {
+      "metrics": {
+        "name": "cnn",
+        "accuracy": 0.767166430092264,
+        "f1": 0.7639619359616499,
+        "auc": 0.8315496569794835
+      },
+      "per_class": {
+        "normal": {
+          "precision": 0.6556005021620868,
+          "recall": 0.9679744619503655,
+          "f1-score": 0.7817372863736538
+        },
+        "attack": {
+          "precision": 0.962100901779186,
+          "recall": 0.6152107846957063,
+          "f1-score": 0.7505109558439089
+        }
+      },
+      "evaluation": {
+        "fidelity": {
+          "SHAP": 0.4058310241523304,
+          "LIME": 0.21971496804184426,
+          "Saliency": 0.07398265423235444,
+          "Grad-CAM": 0.11007169896016421
+        },
+        "consistency": {
+          "SHAP-LIME": 0.36267848164907,
+          "SHAP-Saliency": 0.253629123714263,
+          "SHAP-Grad-CAM": 0.24234940669925187,
+          "LIME-Saliency": 0.23959383753501398,
+          "LIME-Grad-CAM": 0.23284068013170173,
+          "Saliency-Grad-CAM": 0.19089844709813747
+        }
+      },
+      "counterfactual_success_rate": 0.4
+    },
+    "xgboost": {
+      "metrics": {
+        "name": "xgboost",
+        "accuracy": 0.8048704755145494,
+        "f1": 0.8038160984564561,
+        "auc": 0.96930718395945
+      },
+      "per_class": {
+        "normal": {
+          "precision": 0.6960436964865663,
+          "recall": 0.9710637421480794,
+          "f1-score": 0.8108689109591986
+        },
+        "attack": {
+          "precision": 0.9687638950644731,
+          "recall": 0.6791085482739811,
+          "f1-score": 0.7984790874524715
+        }
+      },
+      "evaluation": {
+        "fidelity": {
+          "SHAP": 0.5753179479949176,
+          "LIME": 0.35031152224575635
+        },
+        "consistency": {
+          "SHAP-LIME": 0.3433600876247936
+        }
+      },
+      "counterfactual_success_rate": 0.85
+    },
+    "rf": {
+      "metrics": {
+        "name": "rf",
+        "accuracy": 0.7846877217885024,
+        "f1": 0.7825545602202599,
+        "auc": 0.9697264984387134
+      },
+      "per_class": {
+        "normal": {
+          "precision": 0.6734271227594087,
+          "recall": 0.9710637421480794,
+          "f1-score": 0.7953107868769503
+        },
+        "attack": {
+          "precision": 0.9670998712094603,
+          "recall": 0.6436530818982311,
+          "f1-score": 0.7729016562178348
+        }
+      },
+      "evaluation": {
+        "fidelity": {
+          "SHAP": 0.2363119221337614,
+          "LIME": 0.15812329689701984
+        },
+        "consistency": {
+          "SHAP-LIME": 0.4835046326222796
+        }
+      },
+      "counterfactual_success_rate": 0.44
+    }
+  }
+}

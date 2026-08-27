@@ -1,0 +1,150 @@
+{
+  "slice": "all",
+  "ks": [
+    5,
+    10,
+    15,
+    20
+  ],
+  "models": {
+    "cnn": {
+      "methods": [
+        "Counterfactual",
+        "Grad-CAM",
+        "LIME",
+        "SHAP",
+        "Saliency"
+      ],
+      "jaccard": {
+        "5": {
+          "Counterfactual|Grad-CAM": 0.13853174603174603,
+          "Counterfactual|LIME": 0.09813492063492063,
+          "Counterfactual|SHAP": 0.10591269841269842,
+          "Counterfactual|Saliency": 0.18817460317460316,
+          "Grad-CAM|LIME": 0.13174603174603175,
+          "Grad-CAM|SHAP": 0.10329365079365078,
+          "Grad-CAM|Saliency": 0.08357142857142857,
+          "LIME|SHAP": 0.33162698412698416,
+          "LIME|Saliency": 0.1604365079365079,
+          "SHAP|Saliency": 0.11646825396825396
+        },
+        "10": {
+          "Counterfactual|Grad-CAM": 0.2797136317414955,
+          "Counterfactual|LIME": 0.2086694205347456,
+          "Counterfactual|SHAP": 0.2759896063688633,
+          "Counterfactual|Saliency": 0.3182104943560051,
+          "Grad-CAM|LIME": 0.23656273035529995,
+          "Grad-CAM|SHAP": 0.25020888382343487,
+          "Grad-CAM|Saliency": 0.19930057988107525,
+          "LIME|SHAP": 0.36267848164907,
+          "LIME|Saliency": 0.23959383753501398,
+          "SHAP|Saliency": 0.253629123714263
+        },
+        "15": {
+          "Counterfactual|Grad-CAM": 0.46510523329365033,
+          "Counterfactual|LIME": 0.3875193616452198,
+          "Counterfactual|SHAP": 0.5152100388730488,
+          "Counterfactual|Saliency": 0.4510289958504726,
+          "Grad-CAM|LIME": 0.40625716960385155,
+          "Grad-CAM|SHAP": 0.47042278621454836,
+          "Grad-CAM|Saliency": 0.3780628597184662,
+          "LIME|SHAP": 0.4413708431156943,
+          "LIME|Saliency": 0.39907903652411664,
+          "SHAP|Saliency": 0.39280084103539487
+        },
+        "20": {
+          "Counterfactual|Grad-CAM": 0.6967410560454038,
+          "Counterfactual|LIME": 0.6212988750380055,
+          "Counterfactual|SHAP": 0.7139195007890661,
+          "Counterfactual|Saliency": 0.6367601963254136,
+          "Grad-CAM|LIME": 0.642960170264518,
+          "Grad-CAM|SHAP": 0.7158290984377939,
+          "Grad-CAM|Saliency": 0.6094048849701023,
+          "LIME|SHAP": 0.6558633829938176,
+          "LIME|Saliency": 0.62712050268572,
+          "SHAP|Saliency": 0.6258151413803588
+        }
+      },
+      "spearman": {
+        "Counterfactual|Grad-CAM": -0.010894502119830934,
+        "Counterfactual|LIME": -0.10035240487086336,
+        "Counterfactual|SHAP": 0.02514557641066371,
+        "Counterfactual|Saliency": 0.13856062344355172,
+        "Grad-CAM|LIME": 0.0025715440440592235,
+        "Grad-CAM|SHAP": 0.03631900651557607,
+        "Grad-CAM|Saliency": -0.07184708452978164,
+        "LIME|SHAP": 0.3061368640369411,
+        "LIME|Saliency": 0.020555664343139875,
+        "SHAP|Saliency": 0.04718360432485525
+      }
+    },
+    "xgboost": {
+      "methods": [
+        "Counterfactual",
+        "LIME",
+        "SHAP"
+      ],
+      "jaccard": {
+        "5": {
+          "Counterfactual|LIME": 0.32698412698412693,
+          "Counterfactual|SHAP": 0.19305555555555554,
+          "LIME|SHAP": 0.22761904761904758
+        },
+        "10": {
+          "Counterfactual|LIME": 0.33968648998060763,
+          "Counterfactual|SHAP": 0.3581485671191554,
+          "LIME|SHAP": 0.3433600876247936
+        },
+        "15": {
+          "Counterfactual|LIME": 0.42941489098239677,
+          "Counterfactual|SHAP": 0.4487271800752754,
+          "LIME|SHAP": 0.4947799864693121
+        },
+        "20": {
+          "Counterfactual|LIME": 0.6440237154150197,
+          "Counterfactual|SHAP": 0.6142564102564101,
+          "LIME|SHAP": 0.6383321026799288
+        }
+      },
+      "spearman": {
+        "Counterfactual|LIME": 0.3268040268480965,
+        "Counterfactual|SHAP": 0.327618413329552,
+        "LIME|SHAP": 0.28805659963114
+      }
+    },
+    "rf": {
+      "methods": [
+        "Counterfactual",
+        "LIME",
+        "SHAP"
+      ],
+      "jaccard": {
+        "5": {
+          "Counterfactual|LIME": 0.27230158730158727,
+          "Counterfactual|SHAP": 0.23384920634920633,
+          "LIME|SHAP": 0.43682539682539684
+        },
+        "10": {
+          "Counterfactual|LIME": 0.3786964016375782,
+          "Counterfactual|SHAP": 0.36041693600517133,
+          "LIME|SHAP": 0.4835046326222796
+        },
+        "15": {
+          "Counterfactual|LIME": 0.43112833962376307,
+          "Counterfactual|SHAP": 0.4381391720407739,
+          "LIME|SHAP": 0.5498611334485948
+        },
+        "20": {
+          "Counterfactual|LIME": 0.7104468285337852,
+          "Counterfactual|SHAP": 0.6342898550724637,
+          "LIME|SHAP": 0.6795269947443862
+        }
+      },
+      "spearman": {
+        "Counterfactual|LIME": 0.24062497713589906,
+        "Counterfactual|SHAP": 0.25231620903511126,
+        "LIME|SHAP": 0.5059921471169857
+      }
+    }
+  }
+}

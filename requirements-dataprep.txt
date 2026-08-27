@@ -1,0 +1,23 @@
+# ── dataprep env: cleaning, profiling, graph store, analysis ────────────────
+# conda create -n dataprep python=3.11
+# conda activate dataprep
+# pip install -r requirements-dataprep.txt
+#
+# Runs: src/stages/{profile_before,clean,load_graph,analyze_xai}.py
+# Do NOT install TensorFlow/shap/xgboost here — this env is kept free of the
+# model stack so ydata-profiling's dependencies can resolve cleanly.
+
+numpy
+pandas>=2.0
+scikit-learn>=1.3          # LabelEncoder, MinMaxScaler, NearestNeighbors
+scipy>=1.11                # Spearman rank correlation in analyze_xai
+pyarrow>=14                # parquet read/write
+matplotlib>=3.7
+seaborn>=0.12
+
+ydata-profiling            # data profiling (before/clean profiles)
+"setuptools<81"            # PINNED: setuptools 81 removed pkg_resources, which
+                           #         ydata-profiling still imports -> crash
+falkordb                   # graph results store client (talks to Docker on :6379)
+
+mlflow                     # experiment tracking (shared across both envs)

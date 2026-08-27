@@ -1,0 +1,26 @@
+# ── xai-nids env: model training + explainers ──────────────────────────────
+# conda create -n xai-nids python=3.10
+# conda activate xai-nids
+# pip install -r requirements-xai.txt
+#
+# Runs: src/xai_pipeline.py (baseline) and src/stages/train_explain.py
+# Do NOT install the dataprep deps here — ydata-profiling/falkordb pull versions
+# that conflict with the TensorFlow-Metal + numpy<2 stack below.
+
+numpy<2                    # TF-Metal + shap/xgboost 1.7.6 all expect numpy 1.x
+pandas>=2.0
+scikit-learn>=1.3
+scipy>=1.11
+matplotlib>=3.7
+seaborn>=0.12
+pyarrow>=14                # read clean.parquet
+
+tensorflow>=2.13           # CNN
+tensorflow-metal           # Apple Silicon GPU (M1/M2/M3)
+
+xgboost==1.7.6             # PINNED: 3.x serializes base_score as "[...]" which
+                           #         breaks shap TreeExplainer. Do not bump.
+shap==0.49.1               # PINNED: matches xgboost 1.7.6 TreeExplainer format
+lime>=0.2
+
+mlflow                     # experiment tracking (shared across both envs)

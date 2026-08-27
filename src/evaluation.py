@@ -100,7 +100,8 @@ def evaluate_explanations(model_wrapper, X_explain, feat_names,
     n = len(methods)
     matrix = np.eye(n)
     for pair_name, scores in pair_consistency.items():
-        m1, m2 = pair_name.split("-")
+        m1, m2 = next((a, b) for a, b in combinations(methods, 2)
+                      if f"{a}-{b}" == pair_name)
         i1, i2 = methods.index(m1), methods.index(m2)
         matrix[i1, i2] = matrix[i2, i1] = np.mean(scores)
     sns.heatmap(matrix, annot=True, fmt=".2f", xticklabels=methods, yticklabels=methods,
