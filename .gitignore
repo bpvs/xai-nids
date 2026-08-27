@@ -9,3 +9,11 @@ results_*/
 .DS_Store
 cross_model_comparison.pngmlruns/
 .DS_Store
+.DS_Store
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+outputs/best_model.keras
+mlruns/
+GRAPH_AUGMENTATION_NOTES.md
+mlflow.db
