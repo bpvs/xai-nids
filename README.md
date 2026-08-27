@@ -14,116 +14,125 @@ Trains **three models** on NSL-KDD intrusion detection and applies XAI methods t
 | Saliency | ✓ | — | — |
 | Grad-CAM (1D) | ✓ | — | — |
 
-Each model gets its own results folder so you can compare them directly. A cross-model comparison plot is generated at the end.
+Two things live in this repo: the original **baseline pipeline** (`xai_pipeline.py`) and a **staged results pipeline** that cleans the data, trains + explains, stores the XAI results in a graph database, and analyses cross-method agreement to reduce bias.
 
-## Quick start
+## Quick start (baseline)
 
 ```bash
-pip install -r requirements.txt
-python xai_pipeline.py            # full run
-python xai_pipeline.py --fast     # fast dev mode
+pip install -r requirements-xai.txt
+pip install -r requirements-dataprep.txt
+python src/xai_pipeline.py            # full baseline run
+python src/xai_pipeline.py --fast     # fast dev mode
 ```
+
+## Environments
+
+Two conda envs keep heavy/conflicting dependencies apart:
+
+- **`dataprep`** — data cleaning, profiling, FalkorDB, analysis
+  (`ydata-profiling`, `falkordb`, `scikit-learn`, `scipy`, `mlflow`, `"setuptools<81"`)
+- **`xai-nids`** — model training + explainers
+  (`tensorflow`/`tensorflow-metal`, `shap==0.49.1`, `lime`, `xgboost==1.7.6`)
+
+Stages hand off via files, so the two envs never share a process.
+
+> **Dependency pins matter:** `xgboost==1.7.6` + `shap==0.49.1`. XGBoost 3.x
+> serializes `base_score` as a bracketed array string that SHAP's TreeExplainer
+> cannot parse — pinning avoids a hard crash. 
 
 ## Project structure
 
 ```
 xai-nids/
 ├── src/
-│   ├── xai_pipeline.py           # main orchestrator (baseline experiment)
-│   ├── data_utils.py             # NSL-KDD loading + preprocessing
+│   ├── xai_pipeline.py           # baseline orchestrator
+│   ├── data_utils.py             # NSL-KDD loading + preprocessing (COLS, ATTACKS)
 │   ├── explainers.py             # all 5 XAI methods
 │   ├── evaluation.py             # fidelity, consistency, cross-model comparison
-│   ├── preprocess.py             # (legacy) earlier preprocessing helpers
 │   ├── models/
 │   │   ├── base.py               # ModelWrapper abstract base
-│   │   ├── cnn.py                # 1D-CNN (Keras/TensorFlow)
+│   │   ├── cnn.py                # 1D-CNN (Keras/TensorFlow-Metal)
 │   │   ├── xgboost_model.py      # XGBoost classifier
 │   │   └── rf.py                 # Random Forest
-│   └── stages/                   # pipeline stages (graph-augmentation extension)
-│       ├── profile_before.py     # YData profile of raw NSL-KDD
-│       ├── graph_transform.py    # FalkorDB kNN graph + graph features
-│       └── profile_after.py      # YData after-profile + before/after comparison
+│   └── stages/                   # staged results pipeline (see below)
+│       ├── profile_before.py     # ydata-profiling profile of raw NSL-KDD
+│       ├── clean.py              # drop zero-variance + ≥95%-zero columns
+│       ├── train_explain.py      # train 3 models + 5 explainers on cleaned data
+│       ├── load_graph.py         # load XAI results into FalkorDB
+│       └── analyze_xai.py        # Jaccard-across-k + rank correlation + heatmaps
 ├── data/
 │   ├── raw/  (KDDTrain+.txt, KDDTest+.txt)
-│   └── processed/                # after.parquet + sample_manifest.json
-├── reports/                      # profiling HTML reports
-├── results_cnn/                  # CNN outputs (auto-created)
-├── results_xgboost/              # XGBoost outputs (auto-created)
-├── results_rf/                   # Random Forest outputs (auto-created)
+│   └── processed/                # clean.parquet, results.json, attributions.json,
+│                                 #   sample_manifest.json, dropped_columns.json
+├── reports/                      # profiling HTML + analysis heatmaps + summaries
+├── results_cnn/ results_xgboost/ results_rf/   # per-model plots (auto-created)
 ├── cross_model_comparison.png
-└── report.json
+├── report.json
+└── GRAPH_AUGMENTATION_NOTES.md   # methodology + findings for the Ch3 write-up
 ```
 
-*Note: source files now live under `src/`. Internal imports remain flat
-(`from data_utils import ...`); the stage scripts add the repo's `src/` to the
-path automatically, so they run from the repo root regardless.*
+## Staged Results Pipeline (FalkorDB + YData)
 
-## Apple Silicon optimizations
+A pipeline that cleans the data, runs the models + explainers, stores the XAI
+**results** in a graph database, and analyses cross-method agreement. FalkorDB is
+used as an **output-side results store** (persisting what the models produced) —
+**not** as a feature transformer. Models train on plain tabular data; the graph
+holds the explanations for querying and analysis.
 
-- **CNN**: Metal GPU via `tensorflow-metal`, memory growth enabled, `@tf.function`-compiled prediction, GradientTape for counterfactuals (~40× faster than finite differences)
-- **XGBoost**: `tree_method='hist'` + `n_jobs=-1` for all M1 cores
-- **Random Forest**: `n_jobs=-1` for parallel tree building
-- **SHAP**: uses `TreeExplainer` (exact, fast) for tree models and `KernelExplainer` for the CNN
-
----
-
-## Graph-Augmentation Extension (FalkorDB + YData)
-
-An experimental extension that tests whether **graph-structure features** change
-the behaviour of the five explainers on the NIDS domain. The raw tabular
-NSL-KDD data is turned into a **feature-similarity graph**, graph-derived
-features are extracted and appended to the tabular features, and the data is
-profiled **before and after** the graph step for comparison.
-
-> **Status:** proof-of-concept extension on the NIDS reference implementation.
-> It is **not yet part of the dissertation Chapter 3 methodology** — kept as
-> engineering / reproducibility work until results justify writing it up.
-
-### Pipeline (dataprep env)
+### Stages
 
 ```
 raw NSL-KDD
    │
-   ├─▶ profile_before.py   →  YData profile of the RAW data          (reports/profile_before.html)
+   ├─▶ profile_before.py  (dataprep)  →  ydata-profiling profile of raw data
    │
-   ├─▶ graph_transform.py  →  FalkorDB kNN similarity graph          (data/processed/after.parquet
-   │                          + degree & PageRank features            + data/processed/sample_manifest.json)
+   ├─▶ clean.py           (dataprep)  →  drop zero-variance + ≥95%-zero columns
+   │                                      (41 → 26 features), audit record
+   │                                      data/processed/clean.parquet
    │
-   └─▶ profile_after.py    →  YData after-profile + .compare()        (reports/profile_after.html,
-                              + dedicated graph-feature profile        reports/profile_comparison.html,
-                                                                       reports/profile_graph_feats.html)
+   ├─▶ train_explain.py   (xai-nids)  →  train CNN/XGBoost/RF + 5 explainers on
+   │                                      cleaned data, 100 deterministic samples
+   │                                      results.json + attributions.json + manifest
+   │
+   ├─▶ load_graph.py      (dataprep)  →  load results into FalkorDB ('xai_results')
+   │                                      Model/Method/Sample/Feature/Explanation
+   │
+   └─▶ analyze_xai.py     (dataprep)  →  Jaccard @k=5,10,15,20 + Spearman rank
+                                          correlation, sliced all/attack/normal,
+                                          heatmaps + analysis_summary_*.json
 ```
-
-- **Profiling tool:** open-source `ydata-profiling` (no license/token required).
-  Used for the "before/after graphDB" comparison via `ProfileReport.compare()`.
-- **Graph DB:** FalkorDB, run as a Docker service (OpenCypher + GraphBLAS).
-- **Graph construction:** each sampled record is a node; **kNN (k=10)** edges by
-  **cosine similarity** over the scaled features (standard NSL-KDD has no IPs, so
-  edges are similarity-based, not host/flow-based). Edges are loaded
-  **bidirectionally** so PageRank is well-defined for every node.
-- **Graph features extracted:** `graph_degree` and `graph_pagerank` (kept minimal
-  and interpretable). Computed in FalkorDB via `CALL algo.pageRank(...)` and a
-  degree Cypher query; kNN edges are computed in scikit-learn and loaded into the
-  graph (the right tool for each job).
 
 ### Running it
 
-Requires Docker (for FalkorDB) and a separate `dataprep` conda env (keeps
-`ydata-profiling`/`falkordb` away from the TensorFlow-Metal pins in the model env).
+Requires Docker (FalkorDB) for the graph stages.
 
 ```bash
-# 0. FalkorDB service
+# FalkorDB service
 docker run -d --name falkordb -p 6379:6379 -p 3000:3000 falkordb/falkordb:latest
+# (or: docker start falkordb)
 
-# 1. dataprep env
-conda create -n dataprep python=3.11
-conda activate dataprep
-pip install ydata-profiling falkordb scikit-learn node2vec networkx pandas pyarrow mlflow "setuptools<81"
+# 1. clean (advisor-directed 95% cut)
+conda run -n dataprep python src/stages/clean.py --data-dir data \
+    --drop-zero-frac 0.95 \
+    --out data/processed/clean.parquet --dropped data/processed/dropped_columns.json
 
-# 2. run the stages (from repo root)
-conda run -n dataprep python src/stages/profile_before.py  --data-dir data --out reports/profile_before.html
-conda run -n dataprep python src/stages/graph_transform.py --data-dir data --out data/processed/after.parquet --manifest data/processed/sample_manifest.json
-conda run -n dataprep python src/stages/profile_after.py   --data-dir data --after data/processed/after.parquet --out-dir reports
+# 2. train + explain (model env)
+conda run -n xai-nids python src/stages/train_explain.py \
+    --clean data/processed/clean.parquet \
+    --manifest data/processed/sample_manifest.json \
+    --results data/processed/results.json \
+    --attributions data/processed/attributions.json --n-samples 100
+
+# 3. load results into FalkorDB
+conda run -n dataprep python src/stages/load_graph.py \
+    --results data/processed/results.json \
+    --attributions data/processed/attributions.json --graph-name xai_results
+
+# 4. analyse (run each slice)
+conda run -n dataprep python src/stages/analyze_xai.py \
+    --attributions data/processed/attributions.json --out-dir reports --slice all
+conda run -n dataprep python src/stages/analyze_xai.py --slice attack ...
+conda run -n dataprep python src/stages/analyze_xai.py --slice normal ...
 ```
 
 Runs are tracked in **MLflow** (experiment `xai-nids-graph-augmentation`):
@@ -132,48 +141,54 @@ Runs are tracked in **MLflow** (experiment `xai-nids-graph-augmentation`):
 conda run -n dataprep mlflow ui   # http://localhost:5000
 ```
 
-### Key parameters and decisions
+Explore the graph at `http://localhost:3000` (graph `xai_results`), or query it
+directly:
 
-- **Population:** TEST set only (matches where the explained records are drawn from).
-- **Sample:** stratified **10,000 rows** (seed = 42), preserving the test-set attack
-  fraction (~0.569).
-- **Reproducibility:** `sample_manifest.json` records the seed, the sampled test
-  indices, and the shared **"explained" record positions**, so downstream
-  train/explain/evaluate stages use the *same* records instead of re-rolling
-  `np.random.choice`.
+```bash
+docker exec -it falkordb redis-cli GRAPH.QUERY xai_results \
+  "MATCH (e:Explanation {method:'SHAP', model:'xgboost', label:1})-[a:ASSIGNS]->(f:Feature)
+   RETURN f.name, avg(a.importance) AS mean_imp ORDER BY mean_imp DESC LIMIT 5"
+```
 
-### Methodological notes (read before interpreting the comparison)
+### Cleaning rule
 
-1. **Test-set-only, self-consistent scaling.** `graph_transform.py` preprocesses the
-   TEST set on its own MinMax statistics (not the train-fitted scaler in
-   `data_utils.load_data()`), so the sample is scaled self-consistently while
-   preserving row identity. The whole before/after comparison is therefore a
-   **test-vs-test-graph** comparison. The test set's attack fraction (~0.569)
-   differs from the train+test figure (~0.481) because NSL-KDD's test set was
-   built with a harder, shifted distribution — this is expected and internally
-   consistent.
+`clean.py` always drops **zero-variance (constant)** columns. With
+`--drop-zero-frac 0.95` it additionally drops columns that are ≥95% zeros.
+The two categories are logged separately in `dropped_columns.json`. 
+On NSL-KDD the ≥95%-zero columns are largely the
+**rare-attack (U2R/R2L) detectors** — dropping them is a deliberate,
+documented trade-off (see findings below). 41 → 26 features.
 
-2. **Comparison is scaled-vs-scaled, not raw-vs-scaled.** `profile_before.html`
-   profiles the *raw* data (human-readable reference), but `after.parquet` is
-   *scaled*. To avoid a false "shift" that is purely a scaling artifact,
-   `profile_after.py` rebuilds a **scaled** version of the before-features and
-   compares scaled-before vs scaled-after on the shared columns. Any shift in
-   `profile_comparison.html` is therefore attributable to the graph step.
+### Unbiased agreement analysis
 
-3. **Package migration (`ydata-profiling` → `fg-data-profiling`).** `ydata-profiling`
-   is deprecated in favour of `fg-data-profiling` (import becomes
-   `import data_profiling`). Do **not** migrate mid-experiment — regenerate all
-   profiles together after switching. A `SettingWithCopyWarning` raised from inside
-   ydata-profiling during report generation is harmless (library-internal).
+`analyze_xai.py` stores/reads **raw** per-feature importances, so agreement
+metrics are computed on demand rather than frozen:
 
-### Observations so far
+- **Jaccard across k = 5, 10, 15, 20** — top-k overlap at multiple thresholds
+  (avoids single-k bias; k=5/k=10 are the discriminating cuts, k=20 saturates
+  since 20 of 26 features = 77%).
+- **Spearman rank correlation** — full-ordering agreement, catching what
+  Jaccard's hard top-k cliff misses.
+- **Class slices** — `all` / `attack` / `normal`, to expose class-dependent
+  behaviour.
 
-- Sampling preserved the feature distributions (before/after profiles of the 41
-  shared features are near-identical) — the meaningful change is the two added
-  graph features.
-- `graph_degree` and `graph_pagerank` correlate strongly (**r ≈ 0.94**) — expected
-  for a homogeneous kNN graph, and relevant when interpreting XAI attributions
-  over these two near-redundant features.
+Cleaned 26-feature run, 100 stratified samples:
+
+| model | acc | auc | attack recall | normal recall |
+|---|---|---|---|---|
+| cnn | 0.767 | 0.832 | 0.615 | 0.968 |
+| xgboost | 0.805 | 0.969 | 0.679 | 0.971 |
+| rf | 0.785 | 0.970 | 0.644 | 0.971 |
+
+- **Attack recall (0.61–0.68) ≪ normal recall (~0.97), uniformly** across all
+  three models — a data/feature effect of the 95% cut removing rare-attack
+  detectors. Accuracy stays healthy, so the cost is visible only in per-class recall.
+- **SHAP–LIME are the most consistent method pair** across all models (supports
+  hypothesis H2: perturbation-based methods agree more with each other than with
+  gradient-based methods).
+- **SHAP–LIME agreement is consistently lower on attack than normal traffic** —
+  the minority class is harder to *explain* consistently, not just harder to
+  *detect*. Directional trend (appropriately hedged; not significance-tested).
 
 ## References
 
