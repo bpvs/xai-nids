@@ -21,7 +21,7 @@ Graph schema (graph name: xai_results):
         (:Explanation)-[:ASSIGNS {importance}]->(:Feature)
 
 Run (from repo root, dataprep env, FalkorDB running):
-    conda run -n dataprep python src/stages/load_graph.py \
+    .venv-dataprep/bin/python src/stages/load_graph.py \
         --results data/processed/results.json \
         --attributions data/processed/attributions.json \
         --graph-name xai_results

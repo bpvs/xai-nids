@@ -1,11 +1,13 @@
-# ── xai-nids env: model training + explainers ──────────────────────────────
-# conda create -n xai-nids python=3.10
-# conda activate xai-nids
-# pip install -r requirements-xai.txt
+# ── xai venv: model training + explainers ───────────────────────────────────
+# python3.10 -m venv .venv-xai
+# .venv-xai/bin/pip install -r requirements-xai.txt
 #
 # Runs: src/xai_pipeline.py (baseline) and src/stages/train_explain.py
 # Do NOT install the dataprep deps here — ydata-profiling/falkordb pull versions
 # that conflict with the TensorFlow-Metal + numpy<2 stack below.
+#
+# tensorflow-metal is Apple-Silicon-only. On Intel Macs, install without it:
+#   grep -v '^tensorflow-metal' requirements-xai.txt | .venv-xai/bin/pip install -r /dev/stdin
 
 numpy<2                    # TF-Metal + shap/xgboost 1.7.6 all expect numpy 1.x
 pandas>=2.0
@@ -21,6 +23,9 @@ tensorflow-metal           # Apple Silicon GPU (M1/M2/M3)
 xgboost==1.7.6             # PINNED: 3.x serializes base_score as "[...]" which
                            #         breaks shap TreeExplainer. Do not bump.
 shap==0.49.1               # PINNED: matches xgboost 1.7.6 TreeExplainer format
+numba<0.62                 # PINNED: shap pulls in numba; 0.62+ ships no prebuilt
+                           #         wheel for cp310-macosx_x86_64, forcing an
+                           #         LLVM/cmake source build of llvmlite.
 lime>=0.2
 
 mlflow                     # experiment tracking (shared across both envs)

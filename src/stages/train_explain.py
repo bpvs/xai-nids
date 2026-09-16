@@ -5,7 +5,7 @@ Trains the three models (CNN, XGBoost, Random Forest) on the CLEANED NSL-KDD
 table and runs all five XAI methods, over a deterministic 100-sample set.
 
 Run (from repo root, xai env -- needs TensorFlow/SHAP/LIME):
-    conda run -n xai python src/stages/train_explain.py \
+    .venv-xai/bin/python src/stages/train_explain.py \
         --clean data/processed/clean.parquet \
         --manifest data/processed/sample_manifest.json \
         --results data/processed/results.json \
@@ -69,7 +69,7 @@ def load_clean(clean_path):
     if not os.path.exists(clean_path):
         raise FileNotFoundError(
             f"{clean_path} not found. Run the clean stage first:\n"
-            f"  conda run -n dataprep python src/stages/clean.py "
+            f"  .venv-dataprep/bin/python src/stages/clean.py "
             f"--drop-zero-frac 0.95 --out {clean_path} ..."
         )
     df = pd.read_parquet(clean_path)

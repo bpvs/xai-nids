@@ -7,7 +7,7 @@ Cleans the RAW NSL-KDD data by removing:
       (--drop-zero-frac, e.g. 0.95)
 
 Run -- safe comparison version (zero-variance only), kept side by side:
-    conda run -n dataprep python src/stages/clean.py \
+    .venv-dataprep/bin/python src/stages/clean.py \
         --data-dir data \
         --out data/processed/clean_full.parquet \
         --dropped data/processed/dropped_columns_full.json \

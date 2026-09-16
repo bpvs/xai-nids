@@ -16,7 +16,7 @@ matplotlib>=3.7
 seaborn>=0.12
 
 ydata-profiling            # data profiling (before/clean profiles)
-"setuptools<81"            # PINNED: setuptools 81 removed pkg_resources, which
+setuptools<81              # PINNED: setuptools 81 removed pkg_resources, which
                            #         ydata-profiling still imports -> crash
 falkordb                   # graph results store client (talks to Docker on :6379)
 

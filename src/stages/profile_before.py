@@ -13,7 +13,7 @@ Why it profiles the raw dataframe (not load_data()'s output):
     drift from the main pipeline.
 
 Run (from repo root, dataprep env):
-    conda run -n dataprep python src/stages/profile_before.py \
+    .venv-dataprep/bin/python src/stages/profile_before.py \
         --data-dir data \
         --out reports/profile_before.html
 

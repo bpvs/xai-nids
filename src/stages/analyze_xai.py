@@ -21,7 +21,7 @@ Outputs (reports/):
   analysis_summary.json               all numbers, machine-readable
 
 Run (from repo root, dataprep env):
-    conda run -n dataprep python src/stages/analyze_xai.py \
+    .venv-dataprep/bin/python src/stages/analyze_xai.py \
         --attributions data/processed/attributions.json \
         --out-dir reports \
         --ks 5 10 15 20 \

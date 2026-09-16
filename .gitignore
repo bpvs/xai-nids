@@ -1,6 +1,8 @@
 __pycache__/
 *.py[cod]
 venv/
+.venv-dataprep/
+.venv-xai/
 data/
 results_*/
 .ipynb_checkpoints/
