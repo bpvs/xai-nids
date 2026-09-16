@@ -1,0 +1,73 @@
+XAI-NIDS — Prompts used with Claude Code to generate the three analyses
+=======================================================================
+Context: NSL-KDD, 3 models (CNN / XGBoost / Random Forest), 5 XAI methods
+(SHAP, LIME, Counterfactuals, Saliency, Grad-CAM). Data cleaned by an
+advisor-directed 95%-zero-column cut (41 -> 26 features). Cross-method
+agreement measured with Jaccard@5, sliced by attack vs normal traffic.
+100 stratified samples; no significance test (findings are directional).
+
+
+-----------------------------------------------------------------------
+PROMPT 1 -> reports/analysis_method_agreement.md
+-----------------------------------------------------------------------
+Read reports/analysis_summary_all.json, analysis_summary_attack.json, and
+analysis_summary_normal.json, plus the jaccard_*_k5_*.png heatmaps in reports/.
+
+Analyze how the five XAI methods agree with each other, focusing on:
+- Jaccard@5 patterns per model, and which method PAIRS agree most/least
+- the agreement_features (which specific features pairs converge on)
+- the full_consensus results: the CNN's 5-way vs the trees' 3-way, and why the
+  CNN 5-way is near-empty
+
+Context you must respect: this is NSL-KDD, 26 features after a 95%-zero cut that
+removed rare-attack (U2R/R2L) detectors; only 100 samples; no significance test.
+Do not overclaim -- flag where the sample size or the feature cut limits what can
+be concluded. Where a claim is directional only, say so.
+
+Write your analysis to reports/analysis_method_agreement.md. Do not edit any code
+or rerun anything.
+
+
+-----------------------------------------------------------------------
+PROMPT 2 -> reports/analysis_attack_vs_normal.md
+-----------------------------------------------------------------------
+Read the three reports/analysis_summary_{all,attack,normal}.json files and compare
+the ATTACK slice against the NORMAL slice specifically.
+
+Questions to answer from the data:
+- Does SHAP-LIME (and other pairs') agreement differ between attack and normal
+  traffic? By how much, per model?
+- Do the agreement_features CHANGE between slices -- i.e. do the methods anchor on
+  different features when explaining attacks vs normal connections?
+- Does this connect to the known result that attack recall (0.61-0.68) is far
+  below normal recall (~0.97) across all three models?
+
+Frame it as: is the minority attack class harder to EXPLAIN consistently, not just
+harder to DETECT? Be rigorous about the difference between a real effect and noise
+from 100 samples split ~57/43. State findings as directional trends, not proven
+claims.
+
+Write to reports/analysis_attack_vs_normal.md. Do not edit code or rerun anything.
+
+
+-----------------------------------------------------------------------
+PROMPT 3 -> reports/analysis_model_feature_view.md
+-----------------------------------------------------------------------
+Read data/processed/results.json (per-model metrics + per-class recall),
+data/processed/attributions.json (raw per-feature importances), and the
+full_consensus / agreement_features sections of the reports/analysis_summary_*.json.
+
+Analyze from the MODEL and FEATURE angle, not the method angle:
+- Which features dominate each model's explanations (CNN vs XGBoost vs RF), and
+  note that each model anchors on a different feature family
+- Relate the surviving 26 features (post 95%-cut) to what the models can and can't
+  see -- e.g. the rare-attack detectors were removed, so which attack types are the
+  models effectively blind to?
+- Is there tension between a model's accuracy/AUC and which features its
+  explanations rely on?
+
+Respect the scope: this is a proof-of-concept, NSL-KDD only, features constrained
+by the advisor-directed 95% cut. Note where the cleaning decision bounds the
+interpretation.
+
+Write to reports/analysis_model_feature_view.md. Do not edit code or rerun anything.

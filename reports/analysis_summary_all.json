@@ -1,10 +1,7 @@
 {
   "slice": "all",
   "ks": [
-    5,
-    10,
-    15,
-    20
+    5
   ],
   "models": {
     "cnn": {
@@ -27,55 +24,532 @@
           "LIME|SHAP": 0.33162698412698416,
           "LIME|Saliency": 0.1604365079365079,
           "SHAP|Saliency": 0.11646825396825396
-        },
-        "10": {
-          "Counterfactual|Grad-CAM": 0.2797136317414955,
-          "Counterfactual|LIME": 0.2086694205347456,
-          "Counterfactual|SHAP": 0.2759896063688633,
-          "Counterfactual|Saliency": 0.3182104943560051,
-          "Grad-CAM|LIME": 0.23656273035529995,
-          "Grad-CAM|SHAP": 0.25020888382343487,
-          "Grad-CAM|Saliency": 0.19930057988107525,
-          "LIME|SHAP": 0.36267848164907,
-          "LIME|Saliency": 0.23959383753501398,
-          "SHAP|Saliency": 0.253629123714263
-        },
-        "15": {
-          "Counterfactual|Grad-CAM": 0.46510523329365033,
-          "Counterfactual|LIME": 0.3875193616452198,
-          "Counterfactual|SHAP": 0.5152100388730488,
-          "Counterfactual|Saliency": 0.4510289958504726,
-          "Grad-CAM|LIME": 0.40625716960385155,
-          "Grad-CAM|SHAP": 0.47042278621454836,
-          "Grad-CAM|Saliency": 0.3780628597184662,
-          "LIME|SHAP": 0.4413708431156943,
-          "LIME|Saliency": 0.39907903652411664,
-          "SHAP|Saliency": 0.39280084103539487
-        },
-        "20": {
-          "Counterfactual|Grad-CAM": 0.6967410560454038,
-          "Counterfactual|LIME": 0.6212988750380055,
-          "Counterfactual|SHAP": 0.7139195007890661,
-          "Counterfactual|Saliency": 0.6367601963254136,
-          "Grad-CAM|LIME": 0.642960170264518,
-          "Grad-CAM|SHAP": 0.7158290984377939,
-          "Grad-CAM|Saliency": 0.6094048849701023,
-          "LIME|SHAP": 0.6558633829938176,
-          "LIME|Saliency": 0.62712050268572,
-          "SHAP|Saliency": 0.6258151413803588
         }
       },
-      "spearman": {
-        "Counterfactual|Grad-CAM": -0.010894502119830934,
-        "Counterfactual|LIME": -0.10035240487086336,
-        "Counterfactual|SHAP": 0.02514557641066371,
-        "Counterfactual|Saliency": 0.13856062344355172,
-        "Grad-CAM|LIME": 0.0025715440440592235,
-        "Grad-CAM|SHAP": 0.03631900651557607,
-        "Grad-CAM|Saliency": -0.07184708452978164,
-        "LIME|SHAP": 0.3061368640369411,
-        "LIME|Saliency": 0.020555664343139875,
-        "SHAP|Saliency": 0.04718360432485525
+      "agreement_features": {
+        "Counterfactual|Grad-CAM": [
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 15,
+            "fraction": 0.15
+          },
+          {
+            "feature": "service",
+            "both_count": 13,
+            "fraction": 0.13
+          },
+          {
+            "feature": "srv_count",
+            "both_count": 11,
+            "fraction": 0.11
+          },
+          {
+            "feature": "dst_host_srv_rerror_rate",
+            "both_count": 10,
+            "fraction": 0.1
+          },
+          {
+            "feature": "count",
+            "both_count": 9,
+            "fraction": 0.09
+          },
+          {
+            "feature": "srv_rerror_rate",
+            "both_count": 8,
+            "fraction": 0.08
+          },
+          {
+            "feature": "flag",
+            "both_count": 8,
+            "fraction": 0.08
+          },
+          {
+            "feature": "dst_host_srv_count",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "protocol_type",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          }
+        ],
+        "Counterfactual|LIME": [
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 33,
+            "fraction": 0.33
+          },
+          {
+            "feature": "dst_host_serror_rate",
+            "both_count": 18,
+            "fraction": 0.18
+          },
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 7,
+            "fraction": 0.07
+          },
+          {
+            "feature": "dst_host_srv_serror_rate",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "srv_count",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "srv_rerror_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "dst_host_srv_rerror_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "duration",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "logged_in",
+            "both_count": 1,
+            "fraction": 0.01
+          }
+        ],
+        "Counterfactual|SHAP": [
+          {
+            "feature": "dst_host_serror_rate",
+            "both_count": 21,
+            "fraction": 0.21
+          },
+          {
+            "feature": "dst_host_srv_count",
+            "both_count": 16,
+            "fraction": 0.16
+          },
+          {
+            "feature": "count",
+            "both_count": 10,
+            "fraction": 0.1
+          },
+          {
+            "feature": "service",
+            "both_count": 10,
+            "fraction": 0.1
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 7,
+            "fraction": 0.07
+          },
+          {
+            "feature": "flag",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "dst_host_srv_serror_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "dst_host_same_src_port_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "serror_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          }
+        ],
+        "Counterfactual|Saliency": [
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 26,
+            "fraction": 0.26
+          },
+          {
+            "feature": "count",
+            "both_count": 22,
+            "fraction": 0.22
+          },
+          {
+            "feature": "dst_host_serror_rate",
+            "both_count": 18,
+            "fraction": 0.18
+          },
+          {
+            "feature": "dst_host_diff_srv_rate",
+            "both_count": 12,
+            "fraction": 0.12
+          },
+          {
+            "feature": "srv_rerror_rate",
+            "both_count": 7,
+            "fraction": 0.07
+          },
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 6,
+            "fraction": 0.06
+          },
+          {
+            "feature": "srv_count",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "service",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "diff_srv_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          }
+        ],
+        "Grad-CAM|LIME": [
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 37,
+            "fraction": 0.37
+          },
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 28,
+            "fraction": 0.28
+          },
+          {
+            "feature": "logged_in",
+            "both_count": 19,
+            "fraction": 0.19
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 11,
+            "fraction": 0.11
+          },
+          {
+            "feature": "srv_rerror_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "flag",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "dst_host_srv_serror_rate",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "dst_host_serror_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "diff_srv_rate",
+            "both_count": 1,
+            "fraction": 0.01
+          },
+          {
+            "feature": "dst_host_srv_rerror_rate",
+            "both_count": 1,
+            "fraction": 0.01
+          }
+        ],
+        "Grad-CAM|SHAP": [
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 17,
+            "fraction": 0.17
+          },
+          {
+            "feature": "protocol_type",
+            "both_count": 10,
+            "fraction": 0.1
+          },
+          {
+            "feature": "logged_in",
+            "both_count": 9,
+            "fraction": 0.09
+          },
+          {
+            "feature": "serror_rate",
+            "both_count": 6,
+            "fraction": 0.06
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 6,
+            "fraction": 0.06
+          },
+          {
+            "feature": "service",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "dst_host_srv_serror_rate",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "srv_rerror_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "count",
+            "both_count": 3,
+            "fraction": 0.03
+          }
+        ],
+        "Grad-CAM|Saliency": [
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 21,
+            "fraction": 0.21
+          },
+          {
+            "feature": "logged_in",
+            "both_count": 7,
+            "fraction": 0.07
+          },
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 7,
+            "fraction": 0.07
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 6,
+            "fraction": 0.06
+          },
+          {
+            "feature": "count",
+            "both_count": 6,
+            "fraction": 0.06
+          },
+          {
+            "feature": "protocol_type",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "dst_bytes",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "srv_diff_host_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "srv_rerror_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "serror_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          }
+        ],
+        "LIME|SHAP": [
+          {
+            "feature": "logged_in",
+            "both_count": 63,
+            "fraction": 0.63
+          },
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 58,
+            "fraction": 0.58
+          },
+          {
+            "feature": "dst_host_serror_rate",
+            "both_count": 47,
+            "fraction": 0.47
+          },
+          {
+            "feature": "dst_host_srv_serror_rate",
+            "both_count": 30,
+            "fraction": 0.3
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 24,
+            "fraction": 0.24
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 8,
+            "fraction": 0.08
+          },
+          {
+            "feature": "srv_rerror_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "srv_count",
+            "both_count": 1,
+            "fraction": 0.01
+          }
+        ],
+        "LIME|Saliency": [
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 46,
+            "fraction": 0.46
+          },
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 26,
+            "fraction": 0.26
+          },
+          {
+            "feature": "dst_host_serror_rate",
+            "both_count": 22,
+            "fraction": 0.22
+          },
+          {
+            "feature": "logged_in",
+            "both_count": 20,
+            "fraction": 0.2
+          },
+          {
+            "feature": "dst_host_srv_serror_rate",
+            "both_count": 9,
+            "fraction": 0.09
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 6,
+            "fraction": 0.06
+          },
+          {
+            "feature": "srv_rerror_rate",
+            "both_count": 1,
+            "fraction": 0.01
+          },
+          {
+            "feature": "srv_count",
+            "both_count": 1,
+            "fraction": 0.01
+          }
+        ],
+        "SHAP|Saliency": [
+          {
+            "feature": "dst_host_serror_rate",
+            "both_count": 27,
+            "fraction": 0.27
+          },
+          {
+            "feature": "dst_host_srv_serror_rate",
+            "both_count": 17,
+            "fraction": 0.17
+          },
+          {
+            "feature": "srv_serror_rate",
+            "both_count": 15,
+            "fraction": 0.15
+          },
+          {
+            "feature": "logged_in",
+            "both_count": 9,
+            "fraction": 0.09
+          },
+          {
+            "feature": "protocol_type",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "count",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "dst_host_same_src_port_rate",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "flag",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "dst_host_same_srv_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          }
+        ]
+      },
+      "full_consensus": {
+        "n_methods": 5,
+        "methods": [
+          "Counterfactual",
+          "Grad-CAM",
+          "LIME",
+          "SHAP",
+          "Saliency"
+        ],
+        "n_samples_used": 100,
+        "features": [
+          {
+            "feature": "srv_serror_rate",
+            "all_methods_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "dst_host_serror_rate",
+            "all_methods_count": 1,
+            "fraction": 0.01
+          }
+        ]
       }
     },
     "xgboost": {
@@ -89,27 +563,216 @@
           "Counterfactual|LIME": 0.32698412698412693,
           "Counterfactual|SHAP": 0.19305555555555554,
           "LIME|SHAP": 0.22761904761904758
-        },
-        "10": {
-          "Counterfactual|LIME": 0.33968648998060763,
-          "Counterfactual|SHAP": 0.3581485671191554,
-          "LIME|SHAP": 0.3433600876247936
-        },
-        "15": {
-          "Counterfactual|LIME": 0.42941489098239677,
-          "Counterfactual|SHAP": 0.4487271800752754,
-          "LIME|SHAP": 0.4947799864693121
-        },
-        "20": {
-          "Counterfactual|LIME": 0.6440237154150197,
-          "Counterfactual|SHAP": 0.6142564102564101,
-          "LIME|SHAP": 0.6383321026799288
         }
       },
-      "spearman": {
-        "Counterfactual|LIME": 0.3268040268480965,
-        "Counterfactual|SHAP": 0.327618413329552,
-        "LIME|SHAP": 0.28805659963114
+      "agreement_features": {
+        "Counterfactual|LIME": [
+          {
+            "feature": "protocol_type",
+            "both_count": 86,
+            "fraction": 0.86
+          },
+          {
+            "feature": "src_bytes",
+            "both_count": 61,
+            "fraction": 0.61
+          },
+          {
+            "feature": "duration",
+            "both_count": 38,
+            "fraction": 0.38
+          },
+          {
+            "feature": "dst_bytes",
+            "both_count": 33,
+            "fraction": 0.33
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 7,
+            "fraction": 0.07
+          },
+          {
+            "feature": "dst_host_same_src_port_rate",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "dst_host_same_srv_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "service",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "srv_count",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "logged_in",
+            "both_count": 1,
+            "fraction": 0.01
+          }
+        ],
+        "Counterfactual|SHAP": [
+          {
+            "feature": "src_bytes",
+            "both_count": 73,
+            "fraction": 0.73
+          },
+          {
+            "feature": "dst_bytes",
+            "both_count": 34,
+            "fraction": 0.34
+          },
+          {
+            "feature": "service",
+            "both_count": 10,
+            "fraction": 0.1
+          },
+          {
+            "feature": "dst_host_same_src_port_rate",
+            "both_count": 8,
+            "fraction": 0.08
+          },
+          {
+            "feature": "protocol_type",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "dst_host_same_srv_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "dst_host_diff_srv_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "duration",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "dst_host_serror_rate",
+            "both_count": 3,
+            "fraction": 0.03
+          }
+        ],
+        "LIME|SHAP": [
+          {
+            "feature": "src_bytes",
+            "both_count": 78,
+            "fraction": 0.78
+          },
+          {
+            "feature": "dst_host_same_srv_rate",
+            "both_count": 30,
+            "fraction": 0.3
+          },
+          {
+            "feature": "dst_bytes",
+            "both_count": 24,
+            "fraction": 0.24
+          },
+          {
+            "feature": "dst_host_same_src_port_rate",
+            "both_count": 15,
+            "fraction": 0.15
+          },
+          {
+            "feature": "protocol_type",
+            "both_count": 10,
+            "fraction": 0.1
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 9,
+            "fraction": 0.09
+          },
+          {
+            "feature": "dst_host_diff_srv_rate",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "service",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "srv_count",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "duration",
+            "both_count": 2,
+            "fraction": 0.02
+          }
+        ]
+      },
+      "full_consensus": {
+        "n_methods": 3,
+        "methods": [
+          "Counterfactual",
+          "LIME",
+          "SHAP"
+        ],
+        "n_samples_used": 100,
+        "features": [
+          {
+            "feature": "src_bytes",
+            "all_methods_count": 61,
+            "fraction": 0.61
+          },
+          {
+            "feature": "dst_bytes",
+            "all_methods_count": 15,
+            "fraction": 0.15
+          },
+          {
+            "feature": "protocol_type",
+            "all_methods_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "dst_host_same_src_port_rate",
+            "all_methods_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "dst_host_same_srv_rate",
+            "all_methods_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "service",
+            "all_methods_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "duration",
+            "all_methods_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "all_methods_count": 1,
+            "fraction": 0.01
+          }
+        ]
       }
     },
     "rf": {
@@ -123,27 +786,191 @@
           "Counterfactual|LIME": 0.27230158730158727,
           "Counterfactual|SHAP": 0.23384920634920633,
           "LIME|SHAP": 0.43682539682539684
-        },
-        "10": {
-          "Counterfactual|LIME": 0.3786964016375782,
-          "Counterfactual|SHAP": 0.36041693600517133,
-          "LIME|SHAP": 0.4835046326222796
-        },
-        "15": {
-          "Counterfactual|LIME": 0.43112833962376307,
-          "Counterfactual|SHAP": 0.4381391720407739,
-          "LIME|SHAP": 0.5498611334485948
-        },
-        "20": {
-          "Counterfactual|LIME": 0.7104468285337852,
-          "Counterfactual|SHAP": 0.6342898550724637,
-          "LIME|SHAP": 0.6795269947443862
         }
       },
-      "spearman": {
-        "Counterfactual|LIME": 0.24062497713589906,
-        "Counterfactual|SHAP": 0.25231620903511126,
-        "LIME|SHAP": 0.5059921471169857
+      "agreement_features": {
+        "Counterfactual|LIME": [
+          {
+            "feature": "dst_bytes",
+            "both_count": 78,
+            "fraction": 0.78
+          },
+          {
+            "feature": "src_bytes",
+            "both_count": 63,
+            "fraction": 0.63
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 34,
+            "fraction": 0.34
+          },
+          {
+            "feature": "count",
+            "both_count": 19,
+            "fraction": 0.19
+          },
+          {
+            "feature": "duration",
+            "both_count": 5,
+            "fraction": 0.05
+          },
+          {
+            "feature": "flag",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "dst_host_srv_diff_host_rate",
+            "both_count": 1,
+            "fraction": 0.01
+          },
+          {
+            "feature": "dst_host_srv_count",
+            "both_count": 1,
+            "fraction": 0.01
+          }
+        ],
+        "Counterfactual|SHAP": [
+          {
+            "feature": "dst_bytes",
+            "both_count": 80,
+            "fraction": 0.8
+          },
+          {
+            "feature": "src_bytes",
+            "both_count": 75,
+            "fraction": 0.75
+          },
+          {
+            "feature": "count",
+            "both_count": 8,
+            "fraction": 0.08
+          },
+          {
+            "feature": "protocol_type",
+            "both_count": 6,
+            "fraction": 0.06
+          },
+          {
+            "feature": "dst_host_diff_srv_rate",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "service",
+            "both_count": 4,
+            "fraction": 0.04
+          },
+          {
+            "feature": "dst_host_same_srv_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "rerror_rate",
+            "both_count": 1,
+            "fraction": 0.01
+          },
+          {
+            "feature": "flag",
+            "both_count": 1,
+            "fraction": 0.01
+          }
+        ],
+        "LIME|SHAP": [
+          {
+            "feature": "dst_bytes",
+            "both_count": 95,
+            "fraction": 0.95
+          },
+          {
+            "feature": "src_bytes",
+            "both_count": 75,
+            "fraction": 0.75
+          },
+          {
+            "feature": "flag",
+            "both_count": 66,
+            "fraction": 0.66
+          },
+          {
+            "feature": "dst_host_srv_count",
+            "both_count": 20,
+            "fraction": 0.2
+          },
+          {
+            "feature": "logged_in",
+            "both_count": 16,
+            "fraction": 0.16
+          },
+          {
+            "feature": "count",
+            "both_count": 9,
+            "fraction": 0.09
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "both_count": 7,
+            "fraction": 0.07
+          },
+          {
+            "feature": "dst_host_same_src_port_rate",
+            "both_count": 3,
+            "fraction": 0.03
+          },
+          {
+            "feature": "diff_srv_rate",
+            "both_count": 1,
+            "fraction": 0.01
+          },
+          {
+            "feature": "same_srv_rate",
+            "both_count": 1,
+            "fraction": 0.01
+          }
+        ]
+      },
+      "full_consensus": {
+        "n_methods": 3,
+        "methods": [
+          "Counterfactual",
+          "LIME",
+          "SHAP"
+        ],
+        "n_samples_used": 100,
+        "features": [
+          {
+            "feature": "dst_bytes",
+            "all_methods_count": 77,
+            "fraction": 0.77
+          },
+          {
+            "feature": "src_bytes",
+            "all_methods_count": 62,
+            "fraction": 0.62
+          },
+          {
+            "feature": "count",
+            "all_methods_count": 6,
+            "fraction": 0.06
+          },
+          {
+            "feature": "dst_host_rerror_rate",
+            "all_methods_count": 2,
+            "fraction": 0.02
+          },
+          {
+            "feature": "flag",
+            "all_methods_count": 1,
+            "fraction": 0.01
+          }
+        ]
       }
     }
   }
